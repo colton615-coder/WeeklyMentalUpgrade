@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Weekly Mental Upgrade — Interactive Timer Sheet</title>
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  :root{
+    --bg:#0b1220; --card:#111827; --ink:#e5e7eb; --sub:#9ca3af;
+    --accent:#22d3ee; --accent2:#60a5fa; --ok:#34d399; --warn:#f59e0b; --bad:#ef4444; --ring:#1f2937; --muted:#374151;
+  }
+  @media (prefers-color-scheme: light){
+    :root{ --bg:#f8fafc; --card:#ffffff; --ink:#0f172a; --sub:#475569; --accent:#0891b2; --accent2:#2563eb; --ok:#059669; --warn:#d97706; --bad:#dc2626; --ring:#e2e8f0; --muted:#cbd5e1; }
+  }
+  *{box-sizing:border-box} html,body{height:100%} body{margin:0;font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,system-ui,"Helvetica Neue",Arial;background:linear-gradient(180deg,var(--bg),#0b1220 450px);color:var(--ink)}
+  header{position:sticky;top:0;z-index:50;backdrop-filter:saturate(140%) blur(8px);background:linear-gradient(180deg,rgba(11,18,32,0.85),rgba(11,18,32,0.65));border-bottom:1px solid var(--ring)}
+  .wrap{max-width:980px;margin:0 auto;padding:16px}
+  .title{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:8px 0 10px 0}
+  .logo{width:36px;height:36px;border-radius:8px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#0b1220;font-weight:800}
+  h1{font-size:20px;margin:0}
+  .day-tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:10px}
+  .day-tabs button{appearance:none;border:1px solid var(--ring);background:var(--card);color:var(--ink);border-radius:10px;padding:10px 6px;font-weight:600;letter-spacing:0.2px}
+  .day-tabs button.active{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+  .grid{display:grid;gap:16px;margin-top:16px;grid-template-columns: 1.1fr 1fr}
+  @media (max-width:900px){ .grid{grid-template-columns:1fr} }
+  .card{background:var(--card);border:1px solid var(--ring);border-radius:14px;padding:14px;box-shadow: 0 8px 18px rgba(0,0,0,0.15)}
+  h2{font-size:16px;margin:0 0 8px 0} h3{font-size:14px;margin:16px 0 8px 0;color:var(--sub)}
+  .meta p{margin:6px 0;color:var(--sub)} .pill{display:inline-block;padding:4px 8px;border-radius:999px;background:var(--ring);color:var(--ink);font-size:12px}
+  .assignments .row{display:grid;grid-template-columns:28px 1fr auto;gap:10px;align-items:center;padding:10px;border-radius:12px;border:1px solid var(--ring);margin-bottom:8px;background:rgba(255,255,255,0.02)}
+  .assignments .row.done{background:rgba(52,211,153,0.06);border-color:rgba(52,211,153,0.35)}
+  .assignments input[type="checkbox"]{width:18px;height:18px}
+  .row .titleline{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .row .titleline .name{font-weight:700}
+  .row .titleline .dur{font-variant-numeric:tabular-nums;color:var(--sub)}
+  .row .details{color:var(--sub);font-size:14px;margin-top:4px}
+  .controls{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{appearance:none;border:1px solid var(--ring);background:var(--bg);color:var(--ink);padding:8px 10px;border-radius:10px;font-weight:600;cursor:pointer}
+  .btn.primary{background:linear-gradient(135deg,var(--accent),var(--accent2));border:none;color:#0b1220}
+  .btn.ghost{background:transparent} .btn.warn{border-color:var(--warn);color:var(--warn)} .btn.ok{border-color:var(--ok);color:var(--ok)}
+  .bar{height:10px;border-radius:999px;background:var(--ring);overflow:hidden} .bar > span{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  textarea,input[type="text"],input[type="number"]{width:100%;background:transparent;border:1px solid var(--ring);color:var(--ink);border-radius:12px;padding:10px 12px;min-height:42px}
+  textarea{min-height:110px;resize:vertical} .two{display:grid;grid-template-columns:1fr 1fr;gap:10px} @media (max-width:700px){.two{grid-template-columns:1fr}}
+  .small{font-size:12px;color:var(--sub)} .muted{color:var(--sub)} .badge{font-size:12px;padding:2px 8px;border-radius:999px;border:1px solid var(--muted);color:var(--sub)}
+  .list{margin:8px 0 0 0;padding-left:18px} .list li{margin:6px 0} .sticky-tools{position:sticky;top:80px;z-index:5}
+  .footer{color:var(--sub);text-align:center;padding:20px 0} .callout{border-left:4px solid var(--accent);padding:8px 12px;background:rgba(34,211,238,0.07);border-radius:8px}
+  .danger{border-left:4px solid var(--bad);background:rgba(239,68,68,0.08)} .okcall{border-left:4px solid var(--ok);background:rgba(52,211,153,0.08)}
+  .accordion summary{cursor:pointer; list-style:none} .accordion summary::-webkit-details-marker{display:none}
+  .accordion .pane{border:1px solid var(--ring);border-radius:12px;padding:10px;margin:8px 0;background:rgba(255,255,255,0.02)}
+  .timer{font-variant-numeric:tabular-nums;font-weight:800}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="title">
+      <div class="logo">WL</div>
+      <div>
+        <h1>Weekly Mental Upgrade — Interactive Timer Sheet</h1>
+        <div class="small">One-pass usefulness • Offline-first • Autosaves to your device</div>
+      </div>
+    </div>
+    <div class="day-tabs" id="dayTabs"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <div class="grid">
+    <section class="card" id="leftCol">
+      <h2 id="dayTitle">Day</h2>
+      <div class="meta">
+        <p><span class="pill" id="objective">Objective</span></p>
+        <p><span class="badge">Outcome:</span> <span id="outcome"></span></p>
+        <p><span class="badge">Materials:</span> <span id="materials"></span></p>
+      </div>
+
+      <h3>Assignments & Timers</h3>
+      <div class="bar"><span id="progress"></span></div>
+      <div style="height:8px"></div>
+      <div class="controls">
+        <button class="btn primary" id="startAll">▶ Start Autopilot</button>
+        <button class="btn" id="pause">⏸ Pause</button>
+        <button class="btn ghost" id="resetTimers">↺ Reset Timers</button>
+      </div>
+      <div class="assignments" id="assignments"></div>
+
+      <div class="two">
+        <div>
+          <h3>Notes</h3>
+          <textarea id="notes" placeholder="Quick wins, gaps, adjustments..."></textarea>
+        </div>
+        <div>
+          <h3>Score (0–5)</h3>
+          <input id="score" type="number" min="0" max="5" step="1" placeholder="0–5">
+          <div class="small muted">Rubric below. Your goal is a 4 most days; 5 when it compounds.</div>
+          <div style="height:10px"></div>
+          <button class="btn ok" id="exportTxt">Export Day Log</button>
+          <button class="btn" id="printPage">Print Day Sheet</button>
+          <button class="btn warn" id="clearDay">Clear Day Data</button>
+        </div>
+      </div>
+    </section>
+
+    <aside class="card sticky-tools">
+      <h2>Instructions, Templates & Decision Rules</h2>
+      <details class="accordion" open>
+        <summary><strong>Step-by-step Clarifications</strong></summary>
+        <div id="clarifications" class="pane"></div>
+      </details>
+
+      <details class="accordion" open>
+        <summary><strong>Templates</strong></summary>
+        <div id="templates" class="pane"></div>
+      </details>
+
+      <details class="accordion">
+        <summary><strong>Risks</strong></summary>
+        <div id="risks" class="pane danger"></div>
+      </details>
+
+      <details class="accordion">
+        <summary><strong>If / Then</strong></summary>
+        <div id="ifthen" class="pane callout"></div>
+      </details>
+
+      <details class="accordion">
+        <summary><strong>Upgrades</strong></summary>
+        <div id="upgrades" class="pane okcall"></div>
+      </details>
+
+      <details class="accordion">
+        <summary><strong>Score Rubric</strong></summary>
+        <div id="rubric" class="pane"></div>
+      </details>
+    </aside>
+  </div>
+
+  <div class="footer small">Tip: Add this to your iPhone Home Screen for one-tap access. Your data stays on-device.</div>
+</main>
+
+<script>
+// Register service worker for offline caching
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(()=>{});
+  });
+}
+
+// ----- Data Model -----
+const days = [
+  {
+    id:"mon", name:"Mon — Deep Learning",
+    objective:"Turn one hard idea into usable skill + artifact.",
+    outcome:"(1) One-page cheat sheet, (2) 7+ flashcards, (3) a scheduled real-world rep within 48h.",
+    materials:"One dense source (article/video/your notes), phone for 60s voice memo, paper or Notes app.",
+    assignments:[
+      {title:"Pick topic & sharp question", min:2, details:[
+        "Choose ONE area (golf, iPhone web app, budgeting, social).",
+        "Write a question that forces a mechanism or decision (e.g., 'What sets driver start line?').",
+        "Define success metric for the rep you will schedule."
+      ]},
+      {title:"Pre-test from memory", min:5, details:[
+        "Answer: What is it? Why does it work? Steps? Pitfalls? Example? No sources.",
+        "Flag gaps with a '?' to target during skim."
+      ]},
+      {title:"Skim 1 source", min:8, details:[
+        "Skim, don’t study. Mark: '?' (unknown), '!' (insight), '→' (action).",
+        "Capture 3 insights and 1 action you can do in 48h."
+      ]},
+      {title:"Teach-back (60s voice note)", min:8, details:[
+        "Record using the Feynman script. No jargon. Aim for < 60s.",
+        "If you can’t explain it simply, note the jam points for the build step."
+      ]},
+      {title:"Micro-build: cheat sheet + example", min:15, details:[
+        "Cheat sheet blocks: Definition • 3 Rules • Steps • Red Flags • Example • Do-this-now Cue.",
+        "Add ONE worked example with numbers or a concrete scenario."
+      ]},
+      {title:"Retrieval drill (closed-book)", min:8, details:[
+        "Close everything. Rebuild 'Steps' + 'Red Flags' from memory.",
+        "Compare to your sheet and patch gaps."
+      ]},
+      {title:"Deploy plan", min:5, details:[
+        "Schedule one real rep in the next 48h with the success metric set now.",
+        "Optional: calendar alert + prep checklist."
+      ]},
+      {title:"Log + score + cards", min:4, details:[
+        "Write 1–2 lessons, score 0–5, and make 7 flashcards (concept, def, when it fails, steps, example, contrast, trap)."
+      ]}
+    ],
+    clarifications:[
+      "Scope discipline: 1 topic • 1 source • 1 rep.",
+      "Use the Feynman script: “This is about ___. Imagine you’re 12. The core idea is ___ because ___. Steps: 1) __ 2) __ 3) __. Watch out for __. Example: __.”",
+      "Cheat sheet 'Do-this-now' cue should be something you can execute in under 2 minutes."
+    ],
+    templates:[
+      "Pre-test Qs: What is it? Why does it work? Steps? Pitfalls? Example?",
+      "Cheat sheet: Definition | 3 Rules | Steps | Red Flags | Example | 'Do this now' cue",
+      "Flashcards: Concept | Definition | When it fails | Steps | Example | Contrast | One trap"
+    ],
+    risks:[
+      "Scope creep (chasing 5 sources).",
+      "Prettying the artifact instead of understanding.",
+      "No scheduled rep → zero transfer."
+    ],
+    ifthen:[
+      "If teach-back > 60s or relies on jargon → compress to 3 rules and retry.",
+      "If < 30m available → run Half-Module: Pre-test (3) → Teach-back (5) → Micro-build (10) → Deploy (2)."
+    ],
+    upgrades:[
+      "v1.1 Add a second worked example to the cheat sheet.",
+      "v2 Turn flashcards into a spaced schedule."
+    ],
+    rubric:[
+      "0–1: No artifact, no rep scheduled.",
+      "2: Artifact exists but fuzzy; rep not calendared.",
+      "3: Artifact + rep scheduled; teach-back is passable.",
+      "4: Artifact tight; rep scheduled with clear metric; teach-back crisp.",
+      "5: Same as 4 + second-order insight captured; flashcards queued."
+    ]
+  },
+  {
+    id:"tue", name:"Tue — Build & Ship",
+    objective:"Ship one tiny but real artifact or rep that touches the outside world.",
+    outcome:"(1) Shipped link or completed rep, (2) one feedback note, (3) next step committed.",
+    materials:"Phone for real-device test, minimal scope spec, simple checklist.",
+    assignments:[
+      {title:"Pick scope (Must / Should / Won’t)", min:3, details:[
+        "Write precisely what MUST ship today, what SHOULD (only if time), and what WON’T (explicitly no).",
+        "Tie scope to a user story, even if the user is you."
+      ]},
+      {title:"Define Done + success metric", min:5, details:[
+        "It works when ___ on ___ device (e.g., iPhone Safari).",
+        "Metric example: loads offline; saves inputs; 1 failure path handled."
+      ]},
+      {title:"Build the core path", min:20, details:[
+        "Implement the must-have only. Stub or skip everything else.",
+        "Keep UI ugly. Focus on the behavior."
+      ]},
+      {title:"Test on iPhone", min:10, details:[
+        "Smoke test: load, input, save, back button. Try one failure path.",
+        "Fix only blockers. Log the rest."
+      ]},
+      {title:"Debrief", min:5, details:[
+        "Write 1–2 surprises, one permanent change to your template or SOP."
+      ]},
+      {title:"Announce/Log/Share (optional)", min:2, details:[
+        "Send to one friend or just log it. Commit the next step with a date."
+      ]}
+    ],
+    clarifications:[
+      "Today is about contact with reality, not polish.",
+      "If you can’t test it on your phone today, your slice is too big."
+    ],
+    templates:[
+      "Scope box: Must ___ | Should ___ | Won’t ___ today.",
+      "Definition of Done: It works when ___ on ___ device.",
+      "Test checklist: Loads offline? Inputs save? Back ok? One failure handled?",
+      "Debrief: What surprised me? What will I change next?"
+    ],
+    risks:[
+      "Gold-plating UI.",
+      "Endless bug-hunting.",
+      "Avoiding external exposure."
+    ],
+    ifthen:[
+      "If blocked > 5m → stub or skip the feature for now.",
+      "If not testable on phone → pick a smaller slice."
+    ],
+    upgrades:[
+      "v1.1 Add a single metric dashboard (manual).",
+      "v2 Ask one person for feedback and log their exact words."
+    ],
+    rubric:[
+      "0–1: Didn’t ship.",
+      "2: Shipped but brittle, no test on phone.",
+      "3: Shipped and usable.",
+      "4: Shipped + captured feedback.",
+      "5: Shipped + feedback + next step calendared."
+    ]
+  },
+  {
+    id:"wed", name:"Wed — Systems & Reflection",
+    objective:"Diagnose one friction point and implement one system change (SOP or environment tweak).",
+    outcome:"(1) One-page SOP or trigger tweak, (2) friction removed, (3) tracker line added.",
+    materials:"Pen/Notes, quick audit list, environment items to modify.",
+    assignments:[
+      {title:"Quick audit: leaks", min:5, details:[
+        "Where do you leak time/energy? Sleep, morning ramp, coding start, golf warm-up, etc.",
+        "Pick ONE leak to address today."
+      ]},
+      {title:"Root cause", min:10, details:[
+        "Map Cue → Routine → Reward or identify the bottleneck/constraint.",
+        "Write the precise trigger that starts the behavior."
+      ]},
+      {title:"Design the change", min:15, details:[
+        "Make a 5–7 step SOP or tweak the environment (remove friction, add cue, preload tools, change defaults).",
+        "Add a 'Done looks like ___' line."
+      ]},
+      {title:"Test plan + tracker", min:5, details:[
+        "Define how you’ll test once today and how you’ll track (daily checkbox)."
+      ]},
+      {title:"Schedule review", min:5, details:[
+        "Book a 7-day check-in. Note what data you’ll look at."
+      ]}
+    ],
+    clarifications:[
+      "If your SOP has >7 steps, it won’t stick.",
+      "Environment beats willpower: make the good path the easy path."
+    ],
+    templates:[
+      "SOP: Title | When | Trigger | Steps (≤7) | Done looks like | Common failure | Safety check",
+      "Env tweak: Remove ___ | Add cue ___ | Preload ___ | Default to ___",
+      "Tracker line: Daily [ ] Did it? Notes ___"
+    ],
+    risks:[
+      "Over-engineering.",
+      "Generic advice not tied to a concrete trigger.",
+      "No review scheduled."
+    ],
+    ifthen:[
+      "If you can’t name the trigger → rewrite until obvious.",
+      "If steps exceed 7 → merge/simplify."
+    ],
+    upgrades:[
+      "v1.1 Add a 'reset' protocol for misses.",
+      "v2 Make a laminated card or phone widget."
+    ],
+    rubric:[
+      "0–1: No change documented.",
+      "2: Change written but vague.",
+      "3: Clear SOP/tweak; tested once.",
+      "4: SOP ran; tracker added; review set.",
+      "5: Measurable improvement by end of week."
+    ]
+  },
+  {
+    id:"thu", name:"Thu — Social Reps",
+    objective:"Run 3 deliberate social reps (low-risk, high-learning).",
+    outcome:"(1) 3 executed reps, (2) transcript/snippets saved, (3) one refined script.",
+    materials:"3 targets (warm, cold, in-person), message bank, phone.",
+    assignments:[
+      {title:"Pick targets + intent", min:4, details:[
+        "Choose one warm DM, one cold compliment, one in-person micro-conversation.",
+        "Write the intent of each (curiosity, connection, logistics)."
+      ]},
+      {title:"Craft messages/openers", min:8, details:[
+        "Use Angle → Frame → Ask. Keep it playful/clear; avoid neediness.",
+        "Prep 2 variants if you want to A/B test."
+      ]},
+      {title:"Execute", min:10, details:[
+        "Send/say the lines. No overthinking. Hit the timer and do it."
+      ]},
+      {title:"Log responses", min:5, details:[
+        "Save exact wording and the response. Note latency (mins/hours)."
+      ]},
+      {title:"Iterate one line", min:5, details:[
+        "Tighten one opener based on evidence. Update your bank."
+      ]}
+    ],
+    clarifications:[
+      "Curiosity hooks beat compliments; binary choices reduce friction.",
+      "If silence, try a follow-up with a playful constraint."
+    ],
+    templates:[
+      "Angle → Frame → Ask:\nAngle: “Saw ___, made me think ___.”\nFrame: “Quick chaos theory question: ...” / “Reckless idea: ...”\nAsk: “Rate this 1–10?” or “A or B?”",
+      "Ledger: Person | Opener | Response | Follow-up | Lesson"
+    ],
+    risks:[
+      "Analysis paralysis → no reps.",
+      "Copy-paste vibe.",
+      "Needy energy."
+    ],
+    ifthen:[
+      "If silence → use a curiosity hook or binary choice next time.",
+      "If you feel needy → send, then go do a physical task for 10 minutes."
+    ],
+    upgrades:[
+      "v1.1 Build a bank of 10 openers that fit your voice.",
+      "v2 Weekly A/B test of two lines."
+    ],
+    rubric:[
+      "0–1: 0–1 reps.",
+      "2–3: 2 reps with logs.",
+      "4: 3 reps + one refined opener.",
+      "5: 3 reps + refined opener + scheduled follow-up."
+    ]
+  },
+  {
+    id:"fri", name:"Fri — Synthesis & Creativity",
+    objective:"Combine two domains to make a ‘play’ you can reuse.",
+    outcome:"(1) One-page play (when/why/how), (2) tiny prototype or example.",
+    materials:"Two domain notes, SCAMPER/analogy prompts, minimal prototyping tool.",
+    assignments:[
+      {title:"Map two domains", min:5, details:[
+        "Examples: golf × app, budgeting × social, training × automation.",
+        "Write overlaps, tensions, and obvious bridges."
+      ]},
+      {title:"Idea combine", min:10, details:[
+        "Use SCAMPER or analogy (what’s the golf version of 'undo'?).",
+        "List 5 options; star the most feasible today."
+      ]},
+      {title:"Outline the play", min:15, details:[
+        "Name | Purpose | Trigger | Steps | Proof/example | Anti-case (when NOT to use).",
+        "Make steps run in ≤10 minutes."
+      ]},
+      {title:"Prototype micro-example", min:10, details:[
+        "One tiny demo or scenario: screenshot, sketch, or 20-line snippet."
+      ]},
+      {title:"Name it + usage cue", min:5, details:[
+        "Punchy name + the exact cue ('When X happens, run Y play')."
+      ]}
+    ],
+    clarifications:[
+      "If you can’t name it, it isn’t tight.",
+      "Examples beat descriptions—always attach a tiny proof."
+    ],
+    templates:[
+      "Play Sheet: Name | Purpose | Trigger | Steps | Proof/example | Anti-case",
+      "Usage Cue: 'When ___ happens, run ___'"
+    ],
+    risks:[
+      "Vague brainstorming with no output.",
+      "Choosing ideas too big for today."
+    ],
+    ifthen:[
+      "If no usable name → compress until you can name it.",
+      "If example takes >10 min → pick a smaller cut."
+    ],
+    upgrades:[
+      "v1.1 Record a 60s pitch for the play.",
+      "v2 Share with one friend and capture feedback."
+    ],
+    rubric:[
+      "0–1: No play.",
+      "2: Play outline but no example.",
+      "3: Play + tiny example.",
+      "4: Play named + ready to run.",
+      "5: Play used once with a lesson captured."
+    ]
+  },
+  {
+    id:"sat", name:"Sat — Exposure & Small Risk",
+    objective:"Take one controlled, reversible risk that stretches identity.",
+    outcome:"(1) Evidence of attempt, (2) lesson note, (3) next rung on ladder.",
+    materials:"Risk ladder note, timer, minimal safety plan.",
+    assignments:[
+      {title:"Pick risk from ladder", min:5, details:[
+        "Choose rung 1–2 today.",
+        "Rungs: 1) tiny ask, 2) mild discomfort, 3) visible try, 4) public commitment, 5) mini-performance."
+      ]},
+      {title:"Pre-mortem", min:5, details:[
+        "If ___ happens, then I will ___.",
+        "Name your stop condition and recovery step."
+      ]},
+      {title:"Execute safely", min:10, details:[
+        "Hit start, do the attempt. Keep the failure cost tiny and reversible."
+      ]},
+      {title:"Debrief", min:5, details:[
+        "What did I learn? What surprised me? What micro-skill improved?"
+      ]},
+      {title:"Schedule next rung", min:2, details:[
+        "Put rung + date on calendar."
+      ]}
+    ],
+    clarifications:[
+      "Risk ≠ recklessness. The win is identity expansion with safety.",
+      "Physiology first: if heart rate spikes, breathe 6× then proceed."
+    ],
+    templates:[
+      "Risk Ladder: 1) tiny ask ___ 2) mild discomfort ___ 3) visible try ___ 4) public commitment ___ 5) mini-performance ___",
+      "Pre-mortem: If ___ happens, then I will ___"
+    ],
+    risks:[
+      "Hero attempts that backfire.",
+      "No safety plan.",
+      "Treating it like a dare rather than a rep."
+    ],
+    ifthen:[
+      "If heart rate spikes → breathe 6×; step down one rung if needed.",
+      "If it felt effortless → step up one rung next time."
+    ],
+    upgrades:[
+      "v1.1 Add a buddy for accountability.",
+      "v2 Track rungs in a simple ladder note."
+    ],
+    rubric:[
+      "0–1: No attempt.",
+      "2: Attempt with no lesson.",
+      "3: Attempt + one lesson.",
+      "4: Attempt + lesson + next rung scheduled.",
+      "5: Two rungs climbed safely with notes."
+    ]
+  },
+  {
+    id:"sun", name:"Sun — Review, Plan, Recovery",
+    objective:"Harvest wins, decide the next most important question, and protect recovery.",
+    outcome:"(1) Week recap, (2) Top 3 for next week, (3) Calendar blocks & one recovery activity.",
+    materials:"Calendar, Notes, last week’s artifacts.",
+    assignments:[
+      {title:"Wins (list 5)", min:6, details:[
+        "Scan your week. Write five concrete wins (evidence-based)."
+      ]},
+      {title:"Lessons (3)", min:6, details:[
+        "What changed your mind? Which assumption broke?"
+      ]},
+      {title:"Blockers (3)", min:6, details:[
+        "Name the constraint, not the complaint. Tie each blocker to a decision."
+      ]},
+      {title:"Pick Top 3 for next week", min:8, details:[
+        "Each with a first action that fits on your calendar."
+      ]},
+      {title:"Calendar the first steps", min:8, details:[
+        "Create real blocks with alarms. Protect sleep and ramp time."
+      ]},
+      {title:"Plan recovery", min:6, details:[
+        "Sleep, food, movement, social. Pick one deliberate recovery activity today."
+      ]}
+    ],
+    clarifications:[
+      "If a Top 3 can’t fit on your calendar, it isn’t a Top 3 yet. Slice thinner.",
+      "Recovery is a strategic task, not a reward."
+    ],
+    templates:[
+      "Review Qs: What mattered? What moved? What stalled? What will I cut?",
+      "Top 3: 1) ___ (first action + when) 2) ___ 3) ___",
+      "Recovery: Sleep ___ / Movement ___ / Social ___ / Treat ___"
+    ],
+    risks:[
+      "Vague goals with no calendar entries.",
+      "Telling yourself 'I’ll remember it'."
+    ],
+    ifthen:[
+      "If it doesn’t fit the calendar → rescope until it does.",
+      "If energy is low → front-load recovery before planning."
+    ],
+    upgrades:[
+      "v1.1 Add a weekly scorecard (Mon–Sun 0–5).",
+      "v2 Quarterly review packet."
+    ],
+    rubric:[
+      "0–1: No plan, no blocks.",
+      "2: Top 3 written but unblocked.",
+      "3: Top 3 blocked on calendar.",
+      "4: Clear blocks + recovery activity done.",
+      "5: Clear blocks + recovery + one anticipatory tweak to next week."
+    ]
+  }
+];
+
+// ----- State & Helpers -----
+const $ = (q,root=document)=>root.querySelector(q);
+const $$ = (q,root=document)=>Array.from(root.querySelectorAll(q));
+const state = { day: days[0].id, running:null, remainingSec:0, autopilot:false };
+
+function save(){
+  const payload = {};
+  days.forEach(d=>{
+    if(d.id===state.day){
+      const base = `wl_${d.id}_`;
+      payload[base+'checks'] = $$('#assignments .row input[type=checkbox]').map(x=>x.checked);
+      payload[base+'notes'] = $('#notes').value;
+      payload[base+'score'] = $('#score').value;
+    }
+  });
+  localStorage.setItem('wl_save_'+state.day, JSON.stringify(payload));
+}
+function load(){
+  try{
+    const payload = JSON.parse(localStorage.getItem('wl_save_'+state.day)||'{}');
+    if(!payload) return;
+    const base = `wl_${state.day}_`;
+    const checks = payload[base+'checks']||[];
+    $$('#assignments .row input[type=checkbox]').forEach((x,i)=>{ x.checked = !!checks[i]; });
+    $('#notes').value = payload[base+'notes']||'';
+    $('#score').value = payload[base+'score']||'';
+    updateProgress();
+  }catch(e){}
+}
+
+function fmt(min){ const m = Math.floor(min); const s = Math.round((min - m)*60); return `${m}m${s?(' '+s+'s'):''}`; }
+function fmtSec(s){ const m = Math.floor(s/60); const ss = s%60; return `${String(m).padStart(2,'0')}:${String(ss).padStart(2,'0')}`; }
+
+function beep(){
+  try{
+    const ac = new (window.AudioContext||window.webkitAudioContext)();
+    const o = ac.createOscillator(); const g = ac.createGain();
+    o.type='sine'; o.frequency.value=880; o.connect(g); g.connect(ac.destination);
+    o.start(); g.gain.setValueAtTime(0.0001, ac.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.3, ac.currentTime+0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime+0.4);
+    o.stop(ac.currentTime+0.45);
+  }catch(e){}
+}
+
+function renderDay(){
+  const d = days.find(x=>x.id===state.day);
+  $('#dayTitle').textContent = d.name;
+  $('#objective').textContent = d.objective;
+  $('#outcome').textContent = d.outcome;
+  $('#materials').textContent = d.materials;
+  // assignments
+  const box = $('#assignments'); box.innerHTML='';
+  d.assignments.forEach((a,idx)=>{
+    const row = document.createElement('div');
+    row.className = 'row';
+    row.innerHTML = `
+      <input type="checkbox" aria-label="Done step ${idx+1}">
+      <div>
+        <div class="titleline"><div class="name">${idx+1}. ${a.title}</div><div class="dur"><span class="timer" id="t_${idx}"> ${fmt(a.min)} </span></div></div>
+        <div class="details">${a.details.map(x=>`• ${x}`).join('<br>')}</div>
+      </div>
+      <div class="controls">
+        <button class="btn start" data-idx="${idx}">Start</button>
+        <button class="btn ghost stop" data-idx="${idx}">Stop</button>
+      </div>
+    `;
+    box.appendChild(row);
+  });
+  // clarifications, templates, risks, ifthen, upgrades, rubric
+  const ul = xs => '<ul class="list">'+ xs.map(x=>`<li>${x}</li>`).join('') + '</ul>';
+  $('#clarifications').innerHTML = ul(d.clarifications);
+  $('#templates').innerHTML = ul(d.templates);
+  $('#risks').innerHTML = ul(d.risks);
+  $('#ifthen').innerHTML = ul(d.ifthen);
+  $('#upgrades').innerHTML = ul(d.upgrades);
+  $('#rubric').innerHTML = ul(d.rubric);
+  // bind
+  $('#assignments').onchange = (e)=>{
+    if(e.target.matches('input[type=checkbox]')){
+      e.target.closest('.row').classList.toggle('done', e.target.checked);
+      updateProgress(); save();
+    }
+  };
+  $$('#assignments .start').forEach(btn=>btn.addEventListener('click', ()=>startTimer(parseInt(btn.dataset.idx))));
+  $$('#assignments .stop').forEach(btn=>btn.addEventListener('click', stopTimer));
+  $('#notes').oninput = save;
+  $('#score').oninput = save;
+  updateProgress();
+  load();
+}
+
+function updateProgress(){
+  const checks = $$('#assignments .row input[type=checkbox]');
+  const done = checks.filter(x=>x.checked).length;
+  $('#progress').style.width = (checks.length? (100*done/checks.length):0)+'%';
+  checks.forEach(x=>x.closest('.row').classList.toggle('done', x.checked));
+}
+
+function startTimer(idx){
+  stopTimer();
+  const d = days.find(x=>x.id===state.day);
+  const step = d.assignments[idx];
+  state.running = idx;
+  state.remainingSec = Math.round(step.min*60);
+  state.autopilot = state.autopilot || (document.activeElement && document.activeElement.id==='startAll');
+  tick();
+}
+function stopTimer(){
+  if(state._tickHandle){ clearTimeout(state._tickHandle); state._tickHandle=null; }
+  state.running = null;
+  state.remainingSec = 0;
+  $$('#assignments .timer').forEach((t,i)=>{ t.textContent = ' '+fmt(days.find(x=>x.id===state.day).assignments[i].min)+' '; });
+}
+function tick(){
+  if(state.running===null) return;
+  const tEl = document.getElementById('t_'+state.running);
+  if(!tEl){ stopTimer(); return; }
+  tEl.textContent = ' '+fmtSec(state.remainingSec)+' ';
+  if(state.remainingSec<=0){
+    beep();
+    const row = tEl.closest('.row');
+    const cb = row.querySelector('input[type=checkbox]'); cb.checked=true;
+    row.classList.add('done'); updateProgress(); save();
+    if(state.autopilot){
+      const nextIdx = state.running+1;
+      const d = days.find(x=>x.id===state.day);
+      if(nextIdx<d.assignments.length){ startTimer(nextIdx); return; }
+      else { state.autopilot=false; stopTimer(); }
+    } else { stopTimer(); }
+    return;
+  }
+  state.remainingSec -= 1;
+  state._tickHandle = setTimeout(tick, 1000);
+}
+
+// Export / Print / Clear
+function exportDay(){
+  const d = days.find(x=>x.id===state.day);
+  const checks = $$('#assignments .row input[type=checkbox]').map((c,i)=>`${c.checked?'[x]':'[ ]'} ${i+1}. ${d.assignments[i].title}`);
+  const notes = $('#notes').value;
+  const score = $('#score').value;
+  const text = [`${d.name}`,`Objective: ${d.objective}`,`Outcome: ${d.outcome}`,'','Assignments:',...checks,'','Notes:',notes,'',`Score: ${score}`].join('\n');
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = d.id + '_log.txt'; a.click(); URL.revokeObjectURL(a.href);
+}
+function printDay(){ window.print(); }
+function clearDay(){
+  if(!confirm('Clear checkboxes, notes, and score for this day?')) return;
+  $$('#assignments .row input[type=checkbox]').forEach(x=>x.checked=false);
+  $('#notes').value=''; $('#score').value='';
+  updateProgress(); save();
+}
+
+// init
+document.addEventListener('DOMContentLoaded', ()=>{
+  const tabs = document.getElementById('dayTabs');
+  days.forEach(d=>{
+    const btn = document.createElement('button');
+    btn.textContent = d.name.split('—')[0].trim();
+    btn.className = (d.id===state.day)?'active':'';
+    btn.addEventListener('click', ()=>{
+      state.day = d.id;
+      Array.from(tabs.children).forEach(x=>x.classList.remove('active'));
+      btn.classList.add('active');
+      renderDay();
+    });
+    tabs.appendChild(btn);
+  });
+  document.getElementById('startAll').addEventListener('click', ()=>{ state.autopilot=true; startTimer(0); });
+  document.getElementById('pause').addEventListener('click', ()=>{ if(state._tickHandle){ clearTimeout(state._tickHandle); state._tickHandle=null; } else { tick(); }});
+  document.getElementById('resetTimers').addEventListener('click', stopTimer);
+  document.getElementById('exportTxt').addEventListener('click', exportDay);
+  document.getElementById('printPage').addEventListener('click', printDay);
+  document.getElementById('clearDay').addEventListener('click', clearDay);
+  renderDay();
+});
+</script>
+</body>
+</html>
